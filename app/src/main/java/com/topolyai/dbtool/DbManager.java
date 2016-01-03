@@ -8,6 +8,8 @@ import com.topolyai.dbtool.parser.SqlFileParser;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class DbManager extends SQLiteOpenHelper {
@@ -16,10 +18,7 @@ public class DbManager extends SQLiteOpenHelper {
     private List<SQLVersion> updateSQLs;
 
     private DbManager(Context context, String name, int version) {
-        super(context, name, null, version);
-        this.context = context;
-        DbLogger.init(true);
-        init(context, name, version);
+        this(context, name, version, Collections.<SQLVersion>emptyList());
     }
 
     public static void create(Context context, String name, int version, List<SQLVersion> updateSQLs) {

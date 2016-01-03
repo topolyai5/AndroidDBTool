@@ -24,8 +24,34 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
     protected abstract Extractor<T> getExtractor();
 
     public List<T> findAll() {
-        SQLiteDatabase db = DatabaseProvider.instance().getReadableDatabase();
-        Cursor cursor = db.rawQuery(format("SELECT * FROM %s", tableName), null);
+        Cursor cursor = null;
+        try {
+            SQLiteDatabase db = DatabaseProvider.readableDatabase();
+            cursor = db.rawQuery(format("SELECT * FROM %s", tableName), null);
+            return extractAll(cursor);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
+    public List<T> findAll(int page, int count) {
+        Cursor cursor = null;
+        try {
+            cursor = DatabaseProvider
+                    .readableDatabase()
+                    .rawQuery(format("SELECT * FROM %s LIMIT %s OFFSET %s", tableName, count, page), null);
+            return extractAll(cursor);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+    }
+
+    protected List<T> extractAll(Cursor cursor) {
         List<T> ret = new ArrayList<>();
         Extractor<T> extractor = getExtractor();
         while (cursor.moveToNext()) {
@@ -34,15 +60,12 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         return ret;
     }
 
-    public List<T> findById(long id) {
+    public T findById(long id) {
         SQLiteDatabase db = DatabaseProvider.readableDatabase();
         Cursor cursor = db.rawQuery(format("SELECT * FROM %s WHERE id = %s", tableName, id), null);
-        List<T> ret = new ArrayList<>();
         Extractor<T> extractor = getExtractor();
-        while (cursor.moveToNext()) {
-            ret.add(extractor.extract(cursor));
-        }
-        return ret;
+        boolean b = cursor.moveToFirst();
+        return (b) ? extractor.extract(cursor) : null;
     }
 
     protected void executeBatch(List<String> sqls) {
@@ -56,12 +79,12 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         db.endTransaction();
     }
 
-    public int update(ContentValues contentValues) {
+    public int update(ContentValues contentValues, String whereClause, String[] args) {
         SQLiteDatabase db = null;
         try {
             db = DatabaseProvider.instance().getWritableDatabase();
             db.beginTransaction();
-            int update = db.update(tableName, contentValues, null, null);
+            int update = db.update(tableName, contentValues, whereClause, args);
             db.setTransactionSuccessful();
             return update;
         } finally {
@@ -73,10 +96,21 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
     }
 
     public abstract ContentValues createContentValues(T entity);
-    public abstract ContentValues createContentValuesWithoutNullValues(T entity);
 
     public int update(T entity) {
-        return update(createContentValues(entity));
+
+        Long id = entity.getId();
+        String[] args;
+        String whereClause = null;
+        if (id != null) {
+            args = new String[1];
+            args[0] = entity.getId().toString();
+            whereClause = "id = ?";
+        } else {
+            args = new String[0];
+        }
+
+        return update(createContentValues(entity), whereClause, args);
     }
 
     public int delete(long id) {
@@ -98,7 +132,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         SQLiteDatabase db = DatabaseProvider.writableDatabase();
         try {
             db.beginTransaction();
-            long id = db.insert(tableName, null, createContentValuesWithoutNullValues(obj));
+            long id = db.insert(tableName, null, createContentValues(obj));
             obj.setId(id);
             db.setTransactionSuccessful();
             return obj;
@@ -115,7 +149,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         try {
             db.beginTransaction();
             for (T t : all) {
-                long id = db.insert(tableName, null, createContentValuesWithoutNullValues(t));
+                long id = db.insert(tableName, null, createContentValues(t));
                 t.setId(id);
             }
             db.setTransactionSuccessful();
