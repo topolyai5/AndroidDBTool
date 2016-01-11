@@ -198,4 +198,23 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         return (b) ? extractor.extract(cursor) : null;
     }
 
+    protected List<T> findAllByFields(FieldKeyValuePair... fields) {
+        SQLiteDatabase db = DatabaseProvider.readableDatabase();
+        String where = "";
+        String[] args = new String[fields.length];
+        if (fields.length > 0) {
+            StringBuilder sb = new StringBuilder("WHERE");
+            for (int i = 0; i< fields.length; i++) {
+                FieldKeyValuePair field = fields[i];
+                if (i > 0) {
+                    sb.append("AND");
+                }
+                sb.append(" ").append(field.getKey()).append(" = ?");
+                args[i] = field.getValue().toString();
+            }
+            where = sb.toString();
+        }
+        Cursor cursor = db.rawQuery(format("SELECT * FROM %s %s", tableName, where), args);
+        return extractAll(cursor);
+    }
 }

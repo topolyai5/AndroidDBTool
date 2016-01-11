@@ -22,4 +22,8 @@ public abstract class BaseExtractor<T> implements Extractor<T> {
     protected Boolean getBoolean(Cursor cursor, String name) {
         return cursor.getInt(cursor.getColumnIndex(name)) == 1;
     }
+
+    protected Enum getEnum(Cursor cursor, String type, Class<? extends Enum> clss) {
+        return Enum.valueOf(clss, getString(cursor, type));
+    }
 }
