@@ -45,4 +45,5 @@ dependencies {
     compile 'com.topolyai:avest:0.1.5'
     compile 'org.apache.commons:commons-io:1.3.2'
     provided 'org.projectlombok:lombok:1.12.6'
+    provided 'lombok:lombok-ext:0.1.0'
 }

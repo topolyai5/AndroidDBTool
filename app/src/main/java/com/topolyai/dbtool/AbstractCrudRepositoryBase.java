@@ -13,7 +13,7 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
+public abstract class AbstractCrudRepositoryBase<T extends Entity> {
 
     protected String tableName;
 
@@ -95,8 +95,6 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         }
     }
 
-    public abstract ContentValues createContentValues(T entity);
-
     public int update(T entity) {
 
         Long id = entity.getId();
@@ -110,7 +108,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
             args = new String[0];
         }
 
-        return update(createContentValues(entity), whereClause, args);
+        return update(entity.contentValues(), whereClause, args);
     }
 
     public int delete(long id) {
@@ -132,7 +130,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         SQLiteDatabase db = DatabaseProvider.writableDatabase();
         try {
             db.beginTransaction();
-            long id = db.insert(tableName, null, createContentValues(obj));
+            long id = db.insert(tableName, null, obj.contentValues());
             obj.setId(id);
             db.setTransactionSuccessful();
             return obj;
@@ -149,7 +147,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         try {
             db.beginTransaction();
             for (T t : all) {
-                long id = db.insert(tableName, null, createContentValues(t));
+                long id = db.insert(tableName, null, t.contentValues());
                 t.setId(id);
             }
             db.setTransactionSuccessful();

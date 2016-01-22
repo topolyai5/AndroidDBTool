@@ -1,0 +1,49 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
+
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 23
+        versionCode 1
+        versionName "1.0"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+}
+
+task makeJar(type: Copy) {
+    def artifact = "lombok-ext"
+    def group = "lombok"
+    def version = "0.1.0"
+    def fileName = artifact + '-' + version + '.jar'
+
+    from('build/intermediates/bundles/release/')
+    def userHome = System.getProperty("user.home")
+    String outputDir = userHome + "/.m2/repository/" + group.replaceAll("\\.", '/') + File.separator + artifact + File.separator + version
+    into(outputDir)
+    include('classes.jar')
+    rename('classes.jar', fileName)
+    logger.info("Modul info: {}", fileName)
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:23.1.1'
+
+    provided 'org.projectlombok:lombok:1.12.6'
+    compile 'org.mangosdk.spi:spi:0.2.7-SNAPSHOT'
+    compile files('libs/tools.jar')
+}
