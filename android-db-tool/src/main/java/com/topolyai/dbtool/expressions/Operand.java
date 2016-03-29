@@ -4,7 +4,7 @@ import lombok.Getter;
 
 public enum Operand {
 
-    AND("AND"), OR("OR");
+    AND("AND"), OR("OR"), GT(">"), GTE(">="), LT("<"), LTE("<="), EQ("="), IS("is");
 
     @Getter
     private String value;

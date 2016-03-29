@@ -1,24 +1,25 @@
 package com.topolyai.dbtool.expressions;
 
-import com.topolyai.dbtool.FieldKeyValuePair;
-
 import java.util.List;
 
 public class UnaryExpression implements Expression {
 
-    private FieldKeyValuePair fieldKeyValuePair;
+    private Object value;
 
-    public UnaryExpression(FieldKeyValuePair fieldKeyValuePair) {
-        this.fieldKeyValuePair = fieldKeyValuePair;
+    public UnaryExpression(Object value) {
+        this.value = value;
     }
 
     @Override
     public String format() {
-        return fieldKeyValuePair.getKey() + " = ?";
+        return "?";
     }
 
     @Override
     public void appendArgsValue(List<String> objectList) {
-        objectList.add(fieldKeyValuePair.getValue().toString());
+        if (value == null) {
+            value = "null";
+        }
+        objectList.add(value.toString());
     }
 }

@@ -1,7 +1,5 @@
 package com.topolyai.dbtool.expressions;
 
-import com.topolyai.dbtool.FieldKeyValuePair;
-
 import java.util.List;
 
 public class BinaryExpression implements Expression {

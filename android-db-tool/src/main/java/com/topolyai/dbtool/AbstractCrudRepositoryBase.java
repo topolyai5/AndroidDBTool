@@ -5,8 +5,10 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.text.TextUtils;
 
+import com.topolyai.dbtool.expressions.BinaryExpression;
 import com.topolyai.dbtool.expressions.EmptyExpression;
 import com.topolyai.dbtool.expressions.Expression;
+import com.topolyai.dbtool.expressions.ExpressionBuilder;
 import com.topolyai.dbtool.expressions.UnaryExpression;
 import com.topolyai.dbtool.extractor.Extractor;
 import com.topolyai.dbtool.utils.StringUtils;
@@ -50,18 +52,6 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
 
     public List<T> findAll(String[] projections, int page, int count) {
         return runRawQueryForListAndExtract(format("SELECT %s FROM %s LIMIT %s OFFSET %s", getProjs(projections), tableName, count, page), null);
-        /*Cursor cursor = null;
-        try {
-            cursor = DatabaseProvider
-                    .readableDatabase()
-                    .rawQuery(format("SELECT %s FROM %s LIMIT %s OFFSET %s", getProjs(projections), tableName, count, page), null);
-            return extractAll(cursor, projections);
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }*/
-
     }
 
     public T findById(long id) {
@@ -69,31 +59,8 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
     }
 
     public T findById(String[] projections, long id) {
-        return runRawQueryForSingleAndExtract(format("SELECT %s FROM %s WHERE id = %s", getProjs(projections), tableName, id), null);
-        /*Cursor cursor = null;
-        try {
-            SQLiteDatabase db = DatabaseProvider.readableDatabase();
-            cursor = db.rawQuery(format("SELECT %s FROM %s WHERE id = %s", getProjs(projections), tableName, id), null);
-            Extractor<T> extractor = getExtractor();
-            boolean b = cursor.moveToFirst();
-            return (b) ? extractor.extract(cursor) : null;
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }*/
+        return runRawQueryForSingleAndExtract(format("SELECT %s FROM %s WHERE id = ?", getProjs(projections), tableName), new String[]{String.valueOf(id)});
     }
-
-    /*protected void executeBatch(List<String> sqls) {
-        SQLiteDatabase db = DatabaseProvider.instance().getWritableDatabase();
-        db.beginTransaction();
-        for (String string : sqls) {
-            DbLogger.log("Executed: {}", string);
-            db.execSQL(string);
-        }
-        db.setTransactionSuccessful();
-        db.endTransaction();
-    }*/
 
     public int update(ContentValues contentValues, String whereClause, String[] args) {
         SQLiteDatabase db = null;
@@ -129,11 +96,7 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
     }
 
     public int delete(long id) {
-        return delete(new FieldKeyValuePair(Identifiable.ID, id));
-    }
-
-    public int delete(FieldKeyValuePair field) {
-        return delete(new UnaryExpression(field));
+        return delete(ExpressionBuilder.eq(Identifiable.ID, id));
     }
 
     public int delete(Expression expression) {
@@ -205,10 +168,6 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
 
     }
 
-    protected T findByFields(FieldKeyValuePair field) {
-        return findByFields(null, new UnaryExpression(field));
-    }
-
     protected T findByFields(Expression expression) {
         return findByFields(null, expression);
     }
@@ -238,10 +197,6 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         return null;
     }
 
-    protected List<T> findAllByFields(FieldKeyValuePair field) {
-        return findAllByFields(null, new UnaryExpression(field));
-    }
-
     protected List<T> findAllByFields(Expression expression) {
         return findAllByFields(null, expression);
     }
@@ -265,11 +220,6 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         return db.query(tableName, projections, expression.format(), objectList.toArray(new String[objectList.size()]), groupBy(), having(), orderBy());
     }
 
-
-    public boolean exists(FieldKeyValuePair field) {
-        return exists(new UnaryExpression(field));
-    }
-
     public boolean exists(Expression expression) {
         Cursor cursor = null;
         try {
@@ -286,42 +236,13 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         }
     }
 
-    public List<T> in(String field, Object... args) {
-        return in(new String[]{"*"}, field, args);
+    public List<T> in(String field, String args) {
+        return runRawQueryForListAndExtract(format("SELECT %s FROM %s WHERE %s in (%s)", "*", tableName, field, args), null);
     }
 
-    public List<T> in(String[] projections, String field, Object... args) {
-        return runRawQueryForListAndExtract(format("SELECT %s FROM %s WHERE %s in (%s)", getProjs(projections), tableName, field, TextUtils.join(",", args)), null);
-        /*Cursor cursor = null;
-        try {
-            cursor = DatabaseProvider.readableDatabase().rawQuery(format("SELECT %s FROM %s WHERE %s in (%s)", getProjs(projections), tableName, field, TextUtils.join(",", args)), null);
-            return extractAll(cursor, projections);
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }*/
+    public List<T> inWithCountAndPage(String field, int count, int page, String args) {
+        return runRawQueryForListAndExtract(format("SELECT %s FROM %s WHERE %s in (%s) LIMIT %s OFFSET %s", "*", tableName, field, args, count, page), null);
     }
-
-    /*private String buildWhere(String[] args, boolean appendWhere, FieldKeyValuePair... fields) {
-        String where = "";
-        if (fields.length > 0) {
-            StringBuilder sb = new StringBuilder();
-            if (appendWhere) {
-                sb.append("WHERE");
-            }
-            for (int i = 0; i < fields.length; i++) {
-                FieldKeyValuePair field = fields[i];
-                if (i > 0) {
-                    sb.append(" AND");
-                }
-                sb.append(" ").append(field.getKey()).append(" = ?");
-                args[i] = field.getValue().toString();
-            }
-            where = sb.toString();
-        }
-        return where;
-    }*/
 
     public int truncate() {
         SQLiteDatabase db = DatabaseProvider.writableDatabase();
@@ -377,11 +298,9 @@ public abstract class AbstractCrudRepositoryBase<T extends Identifiable> {
         return ret;
     }
 
-
     private String getProjs(String[] projections) {
         return TextUtils.join(",", projections);
     }
 
-//    public abstract ContentValues createContentValues(T entity);
     public abstract void addContentValues(ContentValuesBuilder builder, T entity);
 }
